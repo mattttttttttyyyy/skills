@@ -1,0 +1,4 @@
+interface:
+  display_name: "kawka.app game prep"
+  short_description: "Prepare a browser game as a ready-to-upload ZIP"
+  default_prompt: "Use $gamebox-game-prep to prepare this browser game as a tested, upload-ready kawka.app ZIP."
