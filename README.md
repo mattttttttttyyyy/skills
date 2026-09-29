@@ -8,6 +8,6 @@ npx skills add mattttttttttyyyy/skills --skill gamebox-game-prep
 
 ## Available skills
 
-- [`gamebox-game-prep`](skills/gamebox-game-prep/SKILL.md) — prepare and verify a self-contained HTML5/WebGL game ZIP for kawka.app, including optional player saves.
+- [`gamebox-game-prep`](skills/gamebox-game-prep/README.md) — prepare and verify a self-contained HTML5/WebGL game ZIP for kawka.app, including optional player saves. Includes installation and usage instructions.
 
 To add another skill, create `skills/<skill-name>/SKILL.md` with the standard skill frontmatter. Then list it here. The Skills CLI can install a selected skill from this repository by folder name.

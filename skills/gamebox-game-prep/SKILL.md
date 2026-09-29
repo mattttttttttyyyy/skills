@@ -49,6 +49,8 @@ my-game.zip
 
 If a framework is used, package the contents of its production output directory (often `dist/` or `build/`), not the project folder and not `node_modules/`. Include only files needed at runtime; leave tests, source design files, `.git`, caches, package-manager folders, and development-only configuration outside the upload archive.
 
+The upload form currently allows a 100 MiB ZIP, up to 2,000 entries, and 500 MiB unpacked. Check the current form if preparing a larger game. Include only assets the creator has the right to distribute; keep the game and its metadata suitable for the site's work-safe catalog.
+
 Use relative, case-correct URLs everywhere:
 
 ```html
@@ -90,7 +92,7 @@ For Canvas or WebGL games:
 
 Use the kawka.app save bridge only when progress, settings, or a high score should persist between visits. It stores small string values in a per-game save slot in this browser. It is not an account save, does not sync across devices, and may be cleared with site data. Saves survive replacing the game's build.
 
-Send requests from the game iframe to `parent` with `postMessage(..., "*")`; the sandbox has an opaque origin, so a specific target origin cannot be used. Match each response by `requestId` and accept it only when `event.source === window.parent`. The portal binds requests to that iframe and returns:
+Send requests from the game iframe to `window.parent` with `postMessage`. Use the known portal origin as `targetOrigin` when available; a portable build can use `"*"` for this non-sensitive game state. The iframe's opaque origin requires `"*"` for the portal's replies to the game, not for every outgoing request. Match each response by a unique `requestId`, verify `event.source === window.parent` and `data.type === "gamebox:storage:result"`, and validate the response fields. If a portal origin is configured, also check `event.origin` against it. The portal returns:
 
 ```js
 // Read a value; missing keys return value: null.
@@ -102,7 +104,9 @@ Send requests from the game iframe to `parent` with `postMessage(..., "*")`; the
 // Failure:  { type: "gamebox:storage:result", requestId, ok: false, error: string }
 ```
 
-Serialize structured game state with `JSON.stringify` and parse it after a successful read. Keep each value at or below 32 KB, use keys matching `[A-Za-z0-9._-]{1,64}`, and use no more than 16 keys or 64 KB total per game. Handle `value_too_large`, `too_many_keys`, `quota_exceeded`, `storage_unavailable`, and timeouts by continuing with an in-memory game state and informing the player only if relevant. Saves are optional: a failed save must not block starting or playing.
+Serialize structured game state with `JSON.stringify`; include a schema version, validate parsed data, and recover gracefully from an old or corrupt save. Limits are measured as JavaScript string lengths: at most 32,768 per value and 65,536 total across keys and values, with up to 16 keys. Keys must match `[A-Za-z0-9._-]{1,64}`; request IDs must match `[A-Za-z0-9._:-]{1,64}`. Successful writes and removals return `value: null`.
+
+Register the response listener before sending, use a bounded timeout (for example 2 seconds), and clean up pending requests and listeners. Save at checkpoints or debounce changes rather than writing every frame. Handle `value_too_large`, `too_many_keys`, `quota_exceeded`, `storage_unavailable`, and timeouts by continuing with an in-memory game state and informing the player only if relevant. Saves are optional: a failed save must not block starting or playing.
 
 For direct/local play outside kawka.app, use a best-effort fallback (for example localStorage when available, then memory). Never assume that fallback will work in the hosted iframe. If the game project already has a save helper, inspect and reuse it instead of adding a competing storage path.
 
@@ -120,8 +124,9 @@ Before handing it off:
 1. Inspect the archive listing. Confirm that `index.html` is at the root, there is no extra wrapper directory, and every runtime asset is present.
 2. Serve the game output from a local static HTTP server. Testing only with `file://` can hide path and module problems.
 3. Open the game in a real desktop browser and a narrow mobile-sized viewport. Check a fresh load, first interaction, restart, pause/resume, resize/orientation, keyboard/mouse controls, touch controls when applicable, audio after a gesture, and fullscreen as an enhancement.
-4. Check the browser console for errors and check that required assets load successfully. Test with the network unavailable if the game is intended to be self-contained.
-5. Rebuild or re-export and recreate the ZIP after any source or asset change. Do not hand over an archive that predates the last tested output.
+4. Also test in an iframe with `sandbox="allow-scripts allow-pointer-lock"` and `allow="fullscreen; gamepad; autoplay"`, without `allow-same-origin`. For games with saves, check write/read after reload, missing or corrupt data, and an unavailable bridge. A local parent-page fixture can emulate the documented messages; report that as a local simulation, not a production test.
+5. Check the browser console for errors and check that required assets load successfully. Test with the network unavailable if the game is intended to be self-contained.
+6. Rebuild or re-export and recreate the ZIP after any source or asset change. Do not hand over an archive that predates the last tested output.
 
 Useful inspection commands are:
 
